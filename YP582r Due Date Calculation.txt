@@ -1,0 +1,73 @@
+//Program for due date calculation
+
+
+     FDBCMOTMS  IF   E           K DISK
+     D Yk@CLCddt       PR             8s 0
+     D                                5
+     D                                8s 0
+      *
+     D nFnd            s               n
+     D TrmsCd          s              5
+     D RcvDt8          s              8s 0
+     D DueDt           s              8
+     D DueDt8          s              8s 0
+     D Rcvdt           s              8s 0
+     D DfltDt          s              8s 0
+     C
+     C     *ENTRY        PLIST
+     C                   PARM                    TrmsCd
+     C                   PARM                    RcvDt
+     C                   PARM                    DueDt
+      /free
+         DfltDt=  %int(%char(%date() : *iso0));   //todays date
+         monitor;
+             RcvDt8 = %int(RcvDt);
+         on-error;
+             RcvDt8 = DfltDt;
+         endmon;
+         DueDt8 = YK@CLCDDT (TrmsCd : RcvDt8);
+         DueDt  = %char(DueDt8);
+         *inlr = *on;
+      /end-free
+     PYK@CLCDDT        B
+     DYK@ClcDDT        PI             8s 0
+     D TermsCd                        5
+     D RcvDate                        8S 0
+      *take terms code and receive date and calculate due date
+     D @ddt            s               d   datfmt(*iso)
+     D DueDate         s              8s 0
+     D sDate           s              8
+     D day             s              3s 0
+      /free
+         Monitor;
+             @ddt = %date(RcvDate);
+         On-Error;
+             @ddt = %date(DfltDt);
+         EndMon;
+         setll (TermsCd)     dbcmotms;
+         Reade (TermsCd)     dbcmotms;
+         @ddt = @ddt + %days(CMNET); //add terms days first to find due day
+         day = %subdt(@ddt :*days);
+         nFnd = *off;
+         dow not %eof;
+             if day >= CMSTART and day <= CMEND;
+                nFnd = *on;
+                leave;
+             endif;
+             Reade (TermsCd)     dbcmotms;
+         enddo;
+         if nFnd;
+             //take fields from file and calculate
+            //add first day to receive date
+                 @ddt = @ddt - %days(%subdt(@ddt:*d) -1)
+                       + %days(cmactual -1);
+             if cmaddmth > 0;
+                     @ddt = @ddt + %months(1);
+             endif;
+             DueDate = %int(%char(@ddt : *iso0));
+         else;
+             DueDate = %int(%char(@ddt : *iso0)); //due date = received date
+         endif;
+          return DueDate;
+      /end-free
+     PYK@CLCDDT        E
